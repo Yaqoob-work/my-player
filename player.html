@@ -66,6 +66,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -112,14 +113,13 @@
                     playerVars: {
                         'playsinline': 1,
                         'autoplay': 1,
-                        'controls': 0,
+                        'controls': 0, // Custom progress bar ke liye controls hide kar diye
                         'rel': 0,
                         'showinfo': 0,
                         'iv_load_policy': 3
                     },
                     events: {
-                        'onReady': onPlayerReady,
-                        'onStateChange': onPlayerStateChange
+                        'onReady': onPlayerReady
                     }
                 });
             }
@@ -127,6 +127,8 @@
 
         function onPlayerReady(event) {
             event.target.playVideo();
+            
+            // Flutter ko lagaatar time update bhejein
             if (timeUpdateInterval) {
                 clearInterval(timeUpdateInterval);
             }
@@ -139,25 +141,10 @@
                         window.flutter_inappwebview.callHandler('timeUpdate', currentTime, duration);
                     }
                 }
-            }, 1000);
+            }, 1000); // Har 1 second mein
         }
 
-        function onPlayerStateChange(event) {
-            // If the video starts playing
-            if (event.data == YT.PlayerState.PLAYING) {
-                // Check if the ad container element is visible
-                var adElement = document.querySelector('.ad-showing, .video-ads');
-                if (adElement && adElement.style.display !== 'none') {
-                    // Jump to the end of the ad video, effectively skipping it
-                    player.seekTo(player.getDuration());
-                    // Ensure the main video is unmuted if the ad muted it
-                    if (player.isMuted()) {
-                        player.unMute();
-                    }
-                }
-            }
-        }
-
+        // TV Remote Control ke liye Functions
         function togglePlayPause() {
             if (player && typeof player.getPlayerState === 'function') {
                 if (player.getPlayerState() == 1) { // 1 = playing

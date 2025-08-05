@@ -99,6 +99,8 @@
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
         var player;
+        var timeUpdateInterval;
+
         function onYouTubeIframeAPIReady() {
             const urlParams = new URLSearchParams(window.location.search);
             const videoId = urlParams.get('id');
@@ -111,9 +113,10 @@
                     playerVars: {
                         'playsinline': 1,
                         'autoplay': 1,
-                        'controls': 1,
+                        'controls': 0, // Custom progress bar ke liye controls hide kar diye
                         'rel': 0,
-                        'showinfo': 0
+                        'showinfo': 0,
+                        'iv_load_policy': 3
                     },
                     events: {
                         'onReady': onPlayerReady
@@ -123,13 +126,25 @@
         }
 
         function onPlayerReady(event) {
-            // Quality limit hata di gayi hai, player automatically best quality select karega
             event.target.playVideo();
+            
+            // Flutter ko lagaatar time update bhejein
+            if (timeUpdateInterval) {
+                clearInterval(timeUpdateInterval);
+            }
+            
+            timeUpdateInterval = setInterval(function () {
+                if (player && typeof player.getCurrentTime === 'function') {
+                    const currentTime = player.getCurrentTime();
+                    const duration = player.getDuration();
+                    if (window.flutter_inappwebview) {
+                        window.flutter_inappwebview.callHandler('timeUpdate', currentTime, duration);
+                    }
+                }
+            }, 1000); // Har 1 second mein
         }
 
-        // ▼▼▼ TV Remote Control ke liye Functions ▼▼▼
-
-        // Play/pause ke liye function
+        // TV Remote Control ke liye Functions
         function togglePlayPause() {
             if (player && typeof player.getPlayerState === 'function') {
                 if (player.getPlayerState() == 1) { // 1 = playing
@@ -140,7 +155,6 @@
             }
         }
 
-        // Video ko aage/peeche karne ke liye function
         function seek(seconds) {
             if (player && typeof player.getCurrentTime === 'function') {
                 const currentTime = player.getCurrentTime();

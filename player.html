@@ -66,7 +66,7 @@
 
 
 
-
+<!-- 
 <!DOCTYPE html>
 <html>
 <head>
@@ -159,6 +159,114 @@
             if (player && typeof player.getCurrentTime === 'function') {
                 const currentTime = player.getCurrentTime();
                 player.seekTo(currentTime + seconds, true);
+            }
+        }
+    </script>
+</body>
+</html> -->
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video Player</title>
+    <style>
+        html, body {
+            margin: 0; padding: 0; background-color: black;
+            overflow: hidden; width: 100%; height: 100%;
+        }
+        .video-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container" id="player"></div>
+
+    <script>
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        var player;
+        var timeUpdateInterval;
+
+        function onYouTubeIframeAPIReady() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const videoId = urlParams.get('id');
+
+            if (videoId) {
+                player = new YT.Player('player', {
+                    height: '100%',
+                    width: '100%',
+                    videoId: videoId,
+                    playerVars: {
+                        'playsinline': 1, 'autoplay': 1, 'controls': 0,
+                        'rel': 0, 'showinfo': 0, 'iv_load_policy': 3,
+                        'cc_load_policy': 1, 'fs': 0
+                    },
+                    events: {
+                        'onReady': onPlayerReady,
+                        'onStateChange': onPlayerStateChange
+                    }
+                });
+            }
+        }
+
+        function onPlayerReady(event) {
+            // **ZERO TOLERANCE STEP 1: तुरंत MUTE करें**
+            // इससे विज्ञापन की आवाज़ एक पल के लिए भी नहीं आएगी।
+            event.target.mute();
+
+            // वीडियो चलाना शुरू करें ताकि onStateChange इवेंट तुरंत काम करे।
+            event.target.playVideo();
+            
+            // Flutter को टाइम अपडेट भेजने का इंटरवल
+            if (timeUpdateInterval) clearInterval(timeUpdateInterval);
+            timeUpdateInterval = setInterval(function () {
+                if (player && typeof player.getCurrentTime === 'function') {
+                    const currentTime = player.getCurrentTime();
+                    const duration = player.getDuration();
+                    if (window.flutter_inappwebview) {
+                        window.flutter_inappwebview.callHandler('timeUpdate', currentTime, duration);
+                    }
+                }
+            }, 1000);
+        }
+
+        function onPlayerStateChange(event) {
+            // **ZERO TOLERANCE STEP 2: STATE बदलते ही एक्शन लें**
+            if (event.data === YT.PlayerState.PLAYING) {
+                // विज्ञापन कंटेनर की मौजूदगी की जाँच करें। offsetParent यह सुनिश्चित करता है कि वह सच में दिख रहा है।
+                var adElement = document.querySelector('.ad-showing, .video-ads');
+                if (adElement && adElement.offsetParent !== null) {
+                    // विज्ञापन मिला: इसे म्यूट रखें और तुरंत खत्म कर दें।
+                    player.mute();
+                    player.seekTo(player.getDuration());
+                } else {
+                    // विज्ञापन नहीं मिला (यह असली वीडियो है): आवाज़ वापस चालू करें।
+                    player.unMute();
+                }
+            }
+        }
+
+        // रिमोट कंट्रोल के लिए फंक्शन
+        function togglePlayPause() {
+            if (player && typeof player.getPlayerState === 'function') {
+                if (player.getPlayerState() == 1) player.pauseVideo();
+                else player.playVideo();
+            }
+        }
+
+        function seek(seconds) {
+            if (player && typeof player.getCurrentTime === 'function') {
+                player.seekTo(player.getCurrentTime() + seconds, true);
             }
         }
     </script>
